@@ -19,6 +19,10 @@ import android.hardware.camera2.CameraManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.media.AudioDeviceInfo;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -66,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private CameraManager cameraManager;
     private String camerald;
     private static final int PERMISSIONS_REQUEST_CODE = 1001;
+    private static final int REQUEST_RECORD_AUDIO = 101;
 
     private WifiManager wifiManager;
     private ConnectivityManager connectivityManager;
@@ -73,8 +78,9 @@ public class MainActivity extends AppCompatActivity {
     private ListView listViewNetworks;
     private Button btnRefreshInfo, btnScanNetworks, btnToggleWiFi, btnSpeedTest;
     private ArrayAdapter<String> adapter;
-    private LocationManager locationManager;
-    private LocationListener locationListener;
+    private MediaRecorder recorder;
+    private MediaPlayer player;
+    private boolean isMuted = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
 
         cameraTest.setOnClickListener(v -> {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
+                    != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.CAMERA}, 100);
             } else {
@@ -168,6 +174,102 @@ public class MainActivity extends AppCompatActivity {
         btnStorageInfo.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, StorageDebugActivity.class);
             startActivity(intent);
+        });
+
+        // Sound
+
+        // Permissions
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO},
+                    REQUEST_RECORD_AUDIO);
+        }
+
+        Button testSpeaker = findViewById(R.id.btnSpeakers);
+        Button testMic = findViewById(R.id.btnMic);
+        Button showVolume = findViewById(R.id.btnVolume);
+        Button toggleMute = findViewById(R.id.btnMute);
+        Button audioDevices = findViewById(R.id.btnAudioDevices);
+
+        AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
+        TextView audioDeviceList = findViewById(R.id.audioDeviceList);
+
+        // Speaker test
+        testSpeaker.setOnClickListener(v -> {
+            if (player != null && player.isPlaying()) {
+                player.stop();
+                player.release();
+            }
+            player = MediaPlayer.create(this, Settings.System.DEFAULT_RINGTONE_URI);
+            player.start();
+        });
+
+        // Mic test
+        testMic.setOnClickListener(v -> {
+            try {
+                String filePath = getExternalFilesDir(Environment.DIRECTORY_MUSIC).getAbsolutePath() + "/mic_test.3gp";
+                if (recorder == null) {
+                    recorder = new MediaRecorder();
+                    recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                    recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+                    recorder.setOutputFile(filePath);
+                    recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+                    recorder.prepare();
+                    recorder.start();
+                    Toast.makeText(this, "Recording started...", Toast.LENGTH_SHORT).show();
+                } else {
+                    recorder.stop();
+                    recorder.release();
+                    recorder = null;
+                    Toast.makeText(this, "Recording stopped. Playing...", Toast.LENGTH_SHORT).show();
+                    player = new MediaPlayer();
+                    player.setDataSource(filePath);
+                    player.prepare();
+                    player.start();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                Toast.makeText(this, "Mic test failed.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Volume levels
+        showVolume.setOnClickListener(v -> {
+            int media = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+            int notif = audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION);
+            int alarm = audioManager.getStreamVolume(AudioManager.STREAM_ALARM);
+
+            Toast.makeText(this, "Media: " + media + ", Notification: " + notif +
+                    ", Alarm: " + alarm, Toast.LENGTH_SHORT).show();
+        });
+
+        // Toggle mute
+        toggleMute.setOnClickListener(v -> {
+            isMuted = !isMuted;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC,
+                        isMuted ? AudioManager.ADJUST_MUTE : AudioManager.ADJUST_UNMUTE, 0);
+            }
+            Toast.makeText(this, isMuted ? "Muted" : "Unmuted", Toast.LENGTH_SHORT).show();
+        });
+
+        // Audio devices
+        audioDevices.setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                AudioDeviceInfo[] devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+                StringBuilder sb = new StringBuilder();
+                for (AudioDeviceInfo device : devices) {
+                    sb.append(device.getProductName())
+                            .append(" (Type: ")
+                            .append(device.getType())
+                            .append(")\n");
+                }
+                audioDeviceList.setText(sb.length() > 0 ? sb.toString() :
+                        "No audio output devices found.");
+            } else {
+                audioDeviceList.setText("Not supported on this Android version.");
+            }
         });
     }
 
@@ -407,7 +509,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showBatteryStatus(TextView outputView) {
-        BatteryManager batteryManager = (BatteryManager)  getSystemService(BATTERY_SERVICE);
+        BatteryManager batteryManager = (BatteryManager) getSystemService(BATTERY_SERVICE);
 
         // Battery level as percentage
         int batteryLevel = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
@@ -556,37 +658,4 @@ public class MainActivity extends AppCompatActivity {
         outputView.setText(info.toString());
     }
 
-    // GPS Debugging
-//    @SuppressLint("MissingPermission")
-//    private void startGPSDebugging(TextView textGPSInfo) {
-//        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-//
-//        locationListener = new LocationListener() {
-//            @Override
-//            public void onLocationChanged(@NonNull Location location) {
-//                String info = "Latitude: " + location.getLatitude() + "\n" +
-//                        "Longitude: " + location.getLongitude() + "\n" +
-//                        "Accuracy: " + location.getAccuracy() + "\n" +
-//                        "Provider: " + location.getProvider() + "\n" +
-//                        "Altitude: " + location.getAltitude() + "\n" +
-//                        "Speed: " + location.getSpeed() + "\n";
-//
-//                textGPSInfo.setText(info);
-//
-//                // Stop updates after one result for battery
-//                locationManager.removeUpdates(this);
-//            }
-//        };
-//
-//        if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-//            locationManager.requestLocationUpdates(
-//                    LocationManager.GPS_PROVIDER,
-//                    0,
-//                    0,
-//                    locationListener
-//            );
-//        } else {
-//            textGPSInfo.setText("GPS Provider not enabled.");
-//        }
-//    }
 }

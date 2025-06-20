@@ -48,6 +48,53 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
+        <!-- Sound debugging section -->
+        <TextView
+            android:text="Sound Debugging"
+            android:textStyle="bold"
+            android:textSize="30dp"
+            android:layout_marginBottom="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/btnSpeakers"
+            android:text="Speakers Test"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/btnMic"
+            android:text="Microphone Test"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/btnVolume"
+            android:text="Volume Test"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/btnMute"
+            android:text="Toggle Mute"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <Button
+            android:id="@+id/btnAudioDevices"
+            android:text="Show Audio Devices"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/audioDeviceList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:textSize="14sp"
+            android:text="Audio devices will appear here." />
+
         <!-- WIFI Debugging Section -->
         <TextView
             android:text="Wi-Fi Debugging"

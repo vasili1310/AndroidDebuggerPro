@@ -156,22 +156,17 @@ public class MainActivity extends AppCompatActivity {
 
         btnSystemInfo.setOnClickListener(v -> showSystemInfo(systemInfoOutput));
 
-        // Request location permission
-//        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 101);
-//        }
-//
         Button btnGPS = findViewById(R.id.btnGPS);
-//        TextView textGPSInfo = findViewById(R.id.textGPSInfo);
-//
+
         btnGPS.setOnClickListener(v -> {
-//            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
-//            PackageManager.PERMISSION_GRANTED) {
-//                startGPSDebugging(textGPSInfo);
-//            } else {
-//                textGPSInfo.setText("Location permission not granted");
-//            }
             Intent intent = new Intent(MainActivity.this, GpsDebugActivity.class);
+            startActivity(intent);
+        });
+
+        // Storage Info
+        Button btnStorageInfo = findViewById(R.id.btnStorageInfo);
+        btnStorageInfo.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, StorageDebugActivity.class);
             startActivity(intent);
         });
     }

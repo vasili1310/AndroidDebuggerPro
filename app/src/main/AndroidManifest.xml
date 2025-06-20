@@ -44,6 +44,7 @@
         <activity android:name=".ScreenTestActivity" />
         <activity android:name=".SensorTestActivity" />
         <activity android:name=".GpsDebugActivity" />
+        <activity android:name=".StorageDebugActivity" />
     </application>
 
 </manifest>

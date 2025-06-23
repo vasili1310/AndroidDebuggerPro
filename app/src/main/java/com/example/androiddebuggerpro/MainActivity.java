@@ -1,5 +1,7 @@
 package com.example.androiddebuggerpro;
 
+import static androidx.constraintlayout.widget.ConstraintSet.VISIBLE;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -7,18 +9,13 @@ import androidx.core.content.ContextCompat;
 
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
-import android.content.ContentProviderOperation;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.graphics.Camera;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -33,6 +30,8 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.StatFs;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
@@ -42,6 +41,7 @@ import android.provider.MediaStore;
 import android.provider.Settings;
 import android.text.format.Formatter;
 import android.util.DisplayMetrics;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
@@ -49,20 +49,18 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.Manifest;
 
-import org.w3c.dom.Text;
-
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-import java.io.BufferedReader;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -81,6 +79,10 @@ public class MainActivity extends AppCompatActivity {
     private MediaRecorder recorder;
     private MediaPlayer player;
     private boolean isMuted = false;
+    private TextView cpuInfoTextView;
+    private ScheduledThreadPoolExecutor executor;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private boolean isMonitoring = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
         screenTest.setOnClickListener(v -> {
             Intent intent = new Intent(this, ScreenTestActivity.class);
             startActivity(intent);
+            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
         });
 
         vibrateTest.setOnClickListener(v -> triggerVibration());
@@ -105,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
         sensorTest.setOnClickListener(v -> {
             Intent intent = new Intent(this, SensorTestActivity.class);
             startActivity(intent);
+            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
         });
 
         flashTest.setOnClickListener(v -> toggleFlashlight());
@@ -167,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
         btnGPS.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, GpsDebugActivity.class);
             startActivity(intent);
+            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
         });
 
         // Storage Info
@@ -174,6 +179,7 @@ public class MainActivity extends AppCompatActivity {
         btnStorageInfo.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, StorageDebugActivity.class);
             startActivity(intent);
+            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
         });
 
         // Sound
@@ -270,6 +276,27 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 audioDeviceList.setText("Not supported on this Android version.");
             }
+            audioDeviceList.setAlpha(0f);
+            audioDeviceList.setVisibility(View.VISIBLE);
+            audioDeviceList.animate()
+                    .alpha(1f)
+                    .setDuration(500)
+                    .setListener(null);
+        });
+
+        // CPU
+        cpuInfoTextView = findViewById(R.id.cpuInfoTextView);
+        Button btnStartCpuMonitoring = findViewById(R.id.btnStartCpuMonitoring);
+
+        btnStartCpuMonitoring.setOnClickListener(v -> {
+            if (!isMonitoring) {
+                startCpuMonitoring();
+                btnStartCpuMonitoring.setText("Stop CPU Monitoring");
+            } else {
+                stopCpuMonitoring();
+                btnStartCpuMonitoring.setText("Start CPU Monitoring");
+            }
+            isMonitoring = !isMonitoring;
         });
     }
 
@@ -312,6 +339,30 @@ public class MainActivity extends AppCompatActivity {
             textViewIP.setText("IP Address: N/A");
             textViewLinkSpeed.setText("Link Speed: N/A");
         }
+        textViewSSID.setAlpha(0f);
+        textViewSSID.setVisibility(View.VISIBLE);
+        textViewSSID.animate()
+                .alpha(1f)
+                .setDuration(500)
+                .setListener(null);
+        textViewSignalStrength.setAlpha(0f);
+        textViewSignalStrength.setVisibility(View.VISIBLE);
+        textViewSignalStrength.animate()
+                .alpha(1f)
+                .setDuration(500)
+                .setListener(null);
+        textViewIP.setAlpha(0f);
+        textViewIP.setVisibility(View.VISIBLE);
+        textViewIP.animate()
+                .alpha(1f)
+                .setDuration(500)
+                .setListener(null);
+        textViewLinkSpeed.setAlpha(0f);
+        textViewLinkSpeed.setVisibility(View.VISIBLE);
+        textViewLinkSpeed.animate()
+                .alpha(1f)
+                .setDuration(500)
+                .setListener(null);
     }
 
     private void scanNetworks() {
@@ -380,7 +431,13 @@ public class MainActivity extends AppCompatActivity {
                 downloadSpeedMbps = (fileSizeMB * 8) / timeSeconds;
 
                 double finalDownloadSpeedMbps = downloadSpeedMbps;
-                runOnUiThread(() -> outputView.setText(String.format("Download Speed: %.2f Mbps\n", finalDownloadSpeedMbps)));
+                runOnUiThread(() -> outputView.setText(String.format("Download Speed: %.2f Mbps\nTesting upload speed...", finalDownloadSpeedMbps)));
+                outputView.setAlpha(0f);
+                outputView.setVisibility(View.VISIBLE);
+                outputView.animate()
+                        .alpha(1f)
+                        .setDuration(500)
+                        .setListener(null);
             } catch (Exception e) {
                 e.printStackTrace();
                 runOnUiThread(() -> outputView.setText("Speed: Error - " + e.getMessage() + "\n"));
@@ -418,8 +475,20 @@ public class MainActivity extends AppCompatActivity {
 
             // Show results
             String result = String.format("Download Speed: %.2f Mbps\nUpload Speed: %.2f Mbps", downloadSpeedMbps, uploadSpeedMbps);
+            outputView.setAlpha(0f);
+            outputView.setVisibility(View.VISIBLE);
+            outputView.animate()
+                    .alpha(1f)
+                    .setDuration(500)
+                    .setListener(null);
             runOnUiThread(() -> outputView.setText(result));
         });
+        outputView.setAlpha(0f);
+        outputView.setVisibility(View.VISIBLE);
+        outputView.animate()
+                .alpha(1f)
+                .setDuration(500)
+                .setListener(null);
     }
 
     private void setupListeners() {
@@ -430,6 +499,7 @@ public class MainActivity extends AppCompatActivity {
         btnToggleWiFi.setOnClickListener(v -> {
             Intent panelIntent = new Intent(Settings.ACTION_WIFI_SETTINGS);
             startActivity(panelIntent);
+            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
         });
     }
 
@@ -503,6 +573,7 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (intent.resolveActivity(getPackageManager()) != null) {
             startActivity(intent);
+            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
         } else {
             Toast.makeText(this, "No camera app found", Toast.LENGTH_SHORT).show();
         }
@@ -658,4 +729,44 @@ public class MainActivity extends AppCompatActivity {
         outputView.setText(info.toString());
     }
 
+    // CPU Methods
+    private void startCpuMonitoring() {
+        executor = new ScheduledThreadPoolExecutor(1);
+        executor.scheduleWithFixedDelay(() -> {
+            StringBuilder sb = new StringBuilder();
+            sb.append("CPU ABI: ").append(Build.SUPPORTED_ABIS[0]).append("\n");
+            sb.append("Cores: ").append(Runtime.getRuntime().availableProcessors()).append("\n");
+            sb.append("Manufacturer: ").append(Build.MANUFACTURER).append("\n");
+            sb.append("Model: ").append(Build.MODEL).append("\n");
+
+            ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
+            activityManager.getMemoryInfo(memoryInfo);
+
+            sb.append("\nRAM:\n");
+            sb.append("Available: ").append(memoryInfo.availMem / (1024 * 1024)).append(" MB\n");
+            sb.append("Total: ").append(memoryInfo.totalMem / (1024 * 1024)).append(" MB\n");
+            
+            cpuInfoTextView.setAlpha(0f);
+            cpuInfoTextView.setVisibility(View.VISIBLE);
+            cpuInfoTextView.animate()
+                    .alpha(1f)
+                    .setDuration(500)
+                    .setListener(null);
+
+            mainHandler.post(() -> cpuInfoTextView.setText(sb.toString()));
+        }, 0, 3, TimeUnit.SECONDS); // refresh every 3 secs
+    }
+
+    private void stopCpuMonitoring() {
+        if (executor != null) {
+            executor.shutdownNow();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        stopCpuMonitoring(); // stop when activity is destroyed
+    }
 }

@@ -158,7 +158,8 @@
             android:layout_width="match_parent"
             android:layout_height="200dp"
             android:layout_marginTop="8dp"
-            android:dividerHeight="1dp" />
+            android:dividerHeight="1dp"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/btnToggleWiFi"
@@ -197,7 +198,7 @@
             android:id="@+id/btnStartCpuMonitoring"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Start CPU Monitoring" />
+            android:text="Start CPU &amp; RAM Monitoring" />
 
         <TextView
             android:id="@+id/cpuInfoTextView"
@@ -205,8 +206,8 @@
             android:layout_height="wrap_content"
             android:padding="8dp"
             android:textSize="14sp"
-            android:text="CPU info will appear here..."
-            android:visibility="invisible"/>
+            android:text="CPU &amp; RAM info will appear here..."
+            android:visibility="visible"/>
 
         <!-- Battery Debugging Section -->
         <TextView
@@ -233,7 +234,7 @@
             android:padding="8dp"
             android:textSize="16sp"
             android:layout_marginTop="8dp"
-            android:visibility="invisible"/>
+            android:visibility="visible"/>
 
         <!-- Storage Debugging -->
         <TextView

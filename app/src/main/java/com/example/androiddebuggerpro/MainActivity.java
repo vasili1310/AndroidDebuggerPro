@@ -1,5 +1,6 @@
 package com.example.androiddebuggerpro;
 
+import static android.view.View.GONE;
 import static androidx.constraintlayout.widget.ConstraintSet.VISIBLE;
 
 import androidx.annotation.NonNull;
@@ -310,6 +311,10 @@ public class MainActivity extends AppCompatActivity {
     private void updateWifiInfo() {
         if (!wifiManager.isWifiEnabled()) {
             Toast.makeText(this, "Enable Wi-Fi to refresh info", Toast.LENGTH_LONG).show();
+            textViewSSID.setVisibility(GONE);
+            textViewSignalStrength.setVisibility(GONE);
+            textViewIP.setVisibility(GONE);
+            textViewLinkSpeed.setVisibility(GONE);
             return;
         }
 
@@ -394,6 +399,14 @@ public class MainActivity extends AppCompatActivity {
                 adapter.add(result.SSID + " - " + WifiManager.calculateSignalLevel(result.level, 100) + "%");
             }
             listViewNetworks.setAdapter(adapter);
+            if (listViewNetworks.getVisibility() != View.VISIBLE) {
+                listViewNetworks.setAlpha(0f);
+                listViewNetworks.setVisibility(View.VISIBLE);
+                listViewNetworks.animate()
+                        .alpha(1f)
+                        .setDuration(500)
+                        .setListener(null);
+            }
         }
     }
 
@@ -651,6 +664,13 @@ public class MainActivity extends AppCompatActivity {
                 "Temperature: " + tempC + "°C";
 
         outputView.setText(batteryInfo);
+
+        outputView.setAlpha(0f);
+        outputView.setVisibility(View.VISIBLE);
+        outputView.animate()
+                .alpha(1f)
+                .setDuration(500)
+                .setListener(null);
     }
 
     // System Info
@@ -727,6 +747,13 @@ public class MainActivity extends AppCompatActivity {
         info.append("Build Fingerprint: ").append(Build.FINGERPRINT).append("\n");
 
         outputView.setText(info.toString());
+
+        outputView.setAlpha(0f);
+        outputView.setVisibility(View.VISIBLE);
+        outputView.animate()
+                .alpha(1f)
+                .setDuration(500)
+                .setListener(null);
     }
 
     // CPU Methods
@@ -746,7 +773,8 @@ public class MainActivity extends AppCompatActivity {
             sb.append("\nRAM:\n");
             sb.append("Available: ").append(memoryInfo.availMem / (1024 * 1024)).append(" MB\n");
             sb.append("Total: ").append(memoryInfo.totalMem / (1024 * 1024)).append(" MB\n");
-            
+            sb.append("\nInfo will refresh every 3 seconds until manually stopped.");
+
             cpuInfoTextView.setAlpha(0f);
             cpuInfoTextView.setVisibility(View.VISIBLE);
             cpuInfoTextView.animate()
